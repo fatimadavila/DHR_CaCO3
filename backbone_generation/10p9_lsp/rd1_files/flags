@@ -1,0 +1,49 @@
+-cst_file lattice_csts.cst
+-s start.pdb
+#### remodel flags ####
+-remodel:blueprint design.blueprint
+-remodel:cstfilter 100
+-use_clusters false
+-generic_aa L
+-repeat_structure 4
+-remodel:quick_and_dirty
+-preserve_header
+-chain A
+-picking_old_max_score 1
+-overwrite
+-remodel:design:no_design
+-remodel:use_same_length_fragments false
+-show_simulation_in_pymol 0
+-remodel:no_jumps
+-indexed_structure_store:fragment_threshold_distance 0.4
+#--for digs
+-mh:path:scores_BB_BB /work/brunette/DBs/motifs/xs_bb_ss_FILV_FILV_resl0.5_smooth1.3_msc0.3_mbv1.0/xs_bb_ss_FILV_FILV_resl0.5_smooth1.3_msc0.3_mbv1.0
+#-mh:path:scores_BB_BB /home/drhicks1/DB/motifs/xs_bb_ss_AFILMVWY_AFILMVWY_resl0.5_smooth1.3_msc0.3_mbv1.0/xs_bb_ss_AFILMVWY_AFILMVWY_resl0.5_smooth1.3_msc0.3_mbv1.0
+#-mh:path:scores_BB_BB /suppscr/baker/drhicks1/DB/motifs/xs_bb_ss_AFILVWY_FILWY_resl0.5_smooth1.3_msc0.3_mbv1.0/xs_bb_ss_AFILVWY_FILWY_resl0.5_smooth1.3_msc0.3_mbv1.0
+#--remodel flags for tj's samplings
+-remodel:staged_sampling true
+-start_w_ideal_helices
+-sample_over_loops
+#--repeat params
+-score:ideal_repeat_radius 500.0
+-score:ideal_repeat_rise 0.0
+-score:ideal_repeat_curve 0.0
+
+# Modified penalty functions for the ideal repeat params
+# Added on 11 Oct 2018 by Derrick
+-score:ideal_repeat_rise_before_func QUAD # options are QUAD LINEAR CONST0
+-score:ideal_repeat_radius_before_func LINEAR
+-score:ideal_repeat_curve_before_func QUAD
+-score:ideal_repeat_rise_after_func QUAD
+-score:ideal_repeat_radius_after_func CONST0
+-score:ideal_repeat_curve_after_func QUAD
+
+#--motifs
+-score:max_motif_per_res 3.0
+-score:ignore_terminal_ss_elements 2
+-ignore_terminal_ss_elements 2
+#-corrections:score:rama_map /suppscr/baker/drhicks1/DB/Rama_XPG_3level.txt
+#-corrections:score:rama_map /home/drhicks1/bin/CENTROID/Rama_XPG_3level.txt
+-indexed_structure_store:fragment_store /home/brunette/DBs/hdf5/ss_grouped_vall_helix_shortLoop.h5
+
+

@@ -1,0 +1,131 @@
+<ROSETTASCRIPTS>
+   <TASKOPERATIONS>
+      <InitializeFromCommandline name="IFC" />
+      <IncludeCurrent name="IC" />
+      <LimitAromaChi2 name="aroChi" />
+   </TASKOPERATIONS>
+
+   <RESIDUE_SELECTORS>
+      <Index name="reference" resnums="53A-104A" />
+      <Not name="not_reference" selector="reference" />
+   </RESIDUE_SELECTORS>
+
+   <SCOREFXNS>
+      <ScoreFunction name="BetaNov16" weights="beta_nov16" />
+
+      <ScoreFunction name="BetaNov16Cst" weights="beta_nov16" >
+         <Reweight scoretype="atom_pair_constraint" weight="50.0" />
+         <Reweight scoretype="angle_constraint" weight="20.0" />
+         <Reweight scoretype="dihedral_constraint" weight="100.0" />
+         <Reweight scoretype="coordinate_constraint" weight="10.0" />
+      </ScoreFunction>
+   </SCOREFXNS>
+
+   <FILTERS>
+      <ScoreType name="total_score_plus_cst" scorefxn="BetaNov16Cst" score_type="total_score" threshold="0" confidence="0" />
+
+      <ScoreType name="atom_pair_filter" score_type="atom_pair_constraint" scorefxn="BetaNov16Cst" confidence="0" threshold="0" />
+      <ScoreType name="coordinate_filter" score_type="coordinate_constraint" scorefxn="BetaNov16Cst" confidence="0" threshold="0" />
+      <ScoreType name="dihedral_filter" score_type="dihedral_constraint" scorefxn="BetaNov16Cst" confidence="0" threshold="0" />        
+   </FILTERS>
+
+   <MOVERS>
+      <!-- For idealizing input pose -->
+      <Idealize name="idealize" />
+      <!-- Virtual root required for coordinate constraints -->
+      <VirtualRoot name="add_virtual_reroot" removable="true" remove="false" />
+      <VirtualRoot name="remove_virtual_reroot" removable="true" remove="true" />
+      <!-- For loading and reloading coordinate constraints from file-->
+      <ConstraintSetMover name="add_coordinate_csts" cst_file="%%cst%%" />  
+      <ConstraintSetMover name="remove_coordinate_csts" add_constraints="false" cst_file="none" />
+
+      <!-- // REPEAT TORSION ANGLE MCMC  // -->
+      <!-- Movers used together to sample REPEATED torsion angles -->
+      <Shear name="shear_reference" residue_selector="reference" scorefxn="BetaNov16" temperature="1.0" nmoves="1" angle_max="10.0" preserve_detailed_balance="1" />
+      <MinMover name="minimize_side_chain_and_jumps" scorefxn="BetaNov16Cst" chi="1" bb="0" jump="ALL" />
+      <RepeatPropagationMover name="repeat_propogation_mover" numb_repeats="6" first_template_res="53" last_template_res="104" ideal_repeat="true" maintain_cap_sequence_only="true" nTerm_cap_size="52" cTerm_cap_size="52" />
+      <!-- Need to reload constraints after every torsion angle propogation so residues are matched to correct coordinate -->
+      <ParsedProtocol name="propagate_repeats_and_manage_cst" mode="sequence" >
+         <Add mover_name="remove_virtual_reroot" />
+         <Add mover_name="remove_coordinate_csts" />
+         <Add mover_name="repeat_propogation_mover" />            
+         <Add mover_name="add_virtual_reroot" />
+         <Add mover_name="add_coordinate_csts" />
+      </ParsedProtocol>
+      <!-- Single move (aka trial) of repeat torsion MC has 3 nstruct: -->
+      <!-- 1: Make shear move to reference repeat -->
+      <!-- 2: Propogate torsion angles from reference to other repeats -->
+      <!-- 3: Minimize side chains to accommodate bb shift and minimize jump to realign pose to coordinate constraints-->
+      <ParsedProtocol name="mc_round" mode="sequence" >
+         <Add mover_name="shear_reference" />
+         <Add mover_name="propagate_repeats_and_manage_cst" />
+         <Add mover_name="minimize_side_chain_and_jumps" /> 
+      </ParsedProtocol>
+      <!-- Moves are accepted or rejected by generic simulate annealer mover-->        
+      <GenericSimulatedAnnealer name="monte_carlo_shear" mover_name="mc_round" filter_name="total_score_plus_cst" trials="150" sample_type="low" temperature="1" drift="1" recover_low="1" preapply="0" />
+
+      <!-- // RELAX MOVERS // -->
+      <!-- Repack mover used first to fix everything that can be fixed without backbone modification -->
+      <FastRelax name="repack_and_dock_fit" scorefxn="BetaNov16Cst" repeats="1" task_operations="IFC,IC,aroChi" >
+         <MoveMap name="repack_and_dock_fit_mm" chi="1" bb="0" />
+      </FastRelax>
+      <!-- Relax mover used with heavy NCS constraints to keep things more-or-less repetitive -->
+      <!-- this is a usefull intermediate step, but must be followed up with -->        
+      <FastRelax name="relax_fit" scorefxn="BetaNov16Cst" repeats="1" task_operations="IFC,IC,aroChi" >
+      </FastRelax>
+      <!-- Non-crystallographic constraints -->
+      <!-- only seen by relax mover -->
+      <SetupNCS name="NCS" bb="1" chi="0" wt="1.00" symmetric_sequence="0" >
+         <NCSgroup source="53A-104A" target="1A-52A"/>
+         <NCSgroup source="53A-104A" target="105A-156A"/>
+         <NCSgroup source="53A-104A" target="157A-208A"/>
+         <NCSgroup source="53A-104A" target="209A-260A"/>
+         <NCSgroup source="53A-104A" target="261A-312A"/>
+      </SetupNCS>
+   </MOVERS>
+
+   <PROTOCOLS>
+      <!-- Ensure bond geometry is ideal -->
+      <Add mover_name="idealize" />
+      <!-- Propogate torsions and make repeats completely repetitive -->      
+      <Add mover_name="repeat_propogation_mover" />
+      <!-- Load coordinate constraints from file -->
+      <Add mover_name="add_virtual_reroot" />
+      <Add mover_name="add_coordinate_csts" />
+      <!-- Minimize jumps to align to loaded constraints -->
+      <Add mover_name="minimize_side_chain_and_jumps" /> 
+      <!-- Seed thread with random torsion angle perturbation -->
+      <Add mover_name="mc_round" />
+
+      <!-- 1st round of repeat torison angle Monte Carlo -->
+      <Add mover_name="monte_carlo_shear" />
+      <!-- Relax pose with very strong NCS constraints -->
+      <Add mover_name="NCS" />
+      <Add mover_name="repack_and_dock_fit" />
+      <Add mover_name="relax_fit" /> 
+      <!-- Propagate torsions to make completely repetitive again -->      
+      <Add mover_name="propagate_repeats_and_manage_cst" />
+
+      <!-- 2nd round of repeat torison angle Monte Carlo -->
+      <Add mover_name="monte_carlo_shear" />
+      <!-- Relax pose with very strong NCS constraints -->
+      <Add mover_name="NCS" />
+      <Add mover_name="repack_and_dock_fit" />
+      <Add mover_name="relax_fit" />
+      <!-- Propagate torsions to make completely repetitive again -->      
+      <Add mover_name="propagate_repeats_and_manage_cst" />
+
+      <!-- 3rd round of repeat torison angle Monte Carlo -->
+      <Add mover_name="repack_and_dock_fit" />
+      <Add mover_name="monte_carlo_shear" />
+
+      <!-- Filters to report in score file -->        
+      <Add filter_name="total_score_plus_cst" />
+      <Add filter_name="atom_pair_filter" />
+      <Add filter_name="coordinate_filter" />
+      <Add filter_name="dihedral_filter" />
+   </PROTOCOLS>
+
+   <OUTPUT scorefxn="BetaNov16" />
+  
+</ROSETTASCRIPTS>

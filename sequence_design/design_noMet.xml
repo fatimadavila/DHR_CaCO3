@@ -1,0 +1,240 @@
+<!-- Test later if it is required to either turn off MSA constraints or consensus loop taskops -->
+<!-- Fast relax turned off: test directly all designs in ff -->
+<!-- Disallowed YW in the core -->
+<!-- Maybe disallow YW in boundary and presurf? -->
+<!-- !!! TURN ON THE RADIUS FILTER FOR PRODUCTION !!! -->
+
+<ROSETTASCRIPTS>
+    <RESIDUE_SELECTORS>
+        <SecondaryStructure name="loops" ss="L" overlap="1" include_terminal_loops="1" use_dssp="false"/>
+        <Not name="not_loop" selector="loops" />
+        <Chain name="chainA" chains="A" />
+        <Bin name="G_bin" bin="G" bin_params_file="ABEGO" select_only_alpha_aas="true" />
+        <Bin name="E_bin" bin="E" bin_params_file="ABEGO" select_only_alpha_aas="true" />
+        <Layer name="coreAA_sasa" select_core="true" select_boundary="false" select_surface="false"
+         ball_radius="2.0" use_sidechain_neighbors="false" core_cutoff="20.0" surface_cutoff="36.0" />
+        <Layer name="surfaceAA_sasa" select_core="false" select_boundary="false" select_surface="true"
+         ball_radius="2.0" use_sidechain_neighbors="false" core_cutoff="20.0" surface_cutoff="55.0" />
+        <Layer name="boundaryAA_sasa" select_core="false" select_boundary="true" select_surface="false"
+         ball_radius="2.0" use_sidechain_neighbors="false" core_cutoff="20.0" surface_cutoff="36.0" />
+        <Layer name="presurfAA_sasa" select_core="false" select_boundary="true" select_surface="false"
+         ball_radius="2.0" use_sidechain_neighbors="false" core_cutoff="36.0" surface_cutoff="55.0" />
+        <And name="helix_core_sasa" selectors="coreAA_sasa,not_loop" /> 
+        <And name="helix_boundary_sasa" selectors="boundaryAA_sasa,not_loop" /> 
+        <And name="helix_surface_sasa" selectors="surfaceAA_sasa,not_loop" />
+        <And name="helix_presurf_sasa" selectors="presurfAA_sasa,not_loop" />
+        <Or name="core_boundary" selectors="coreAA_sasa,boundaryAA_sasa" />
+        <And name="helix_core_boundary" selectors="core_boundary,not_loop" />
+        <Not name="not_helix_core_sasa" selector="helix_core_sasa"/>
+        <SSElement name="h1" selection="1,H" reassign_short_terminal_loop="2"/>
+        <SSElement name="first_repeat" selection="n_term" to_selection="2,H,E"/>
+        <SSElement name="last_repeat" selection="-2,H,S" to_selection="c_term"/>
+        <Or name="tails_w_loops" selectors="first_repeat,last_repeat"/>
+        <Or name="preNsurf_helix_sasa" selectors="helix_surface_sasa,helix_presurf_sasa"/>
+        <And name="surf_tails_no_loops" selectors="tails_w_loops,preNsurf_helix_sasa"/>
+        <Not name="not_tails_surf_loops" selector="surf_tails_no_loops"/>
+        <SymmetricalResidue name="sym_hcore" selector="helix_core_sasa"/>
+        <SymmetricalResidue name="sym_hboun" selector="helix_boundary_sasa"/>
+        <SymmetricalResidue name="sym_hpres" selector="helix_presurf_sasa"/>
+        <SymmetricalResidue name="sym_hsurf" selector="helix_surface_sasa"/>
+ 
+    </RESIDUE_SELECTORS>
+    <TASKOPERATIONS>
+        <InitializeFromCommandline name="IFC"/>
+        <IncludeCurrent name="IC"/>
+        <LimitAromaChi2 name="aroTrp" chi2min="45" chi2max="110" include_trp="true" />
+        <LimitAromaChi2 name="aroChi" chi2min="70" chi2max="110" />
+        <OperateOnResidueSubset name="LEU" selector="chainA" >
+         <RestrictAbsentCanonicalAASRLT aas="L"/>
+        </OperateOnResidueSubset>
+        <OperateOnResidueSubset name="G_abego" selector="G_bin" >
+         <RestrictAbsentCanonicalAASRLT aas="DGN"/>
+        </OperateOnResidueSubset>
+        <OperateOnResidueSubset name="E_abego" selector="E_bin" >
+         <RestrictAbsentCanonicalAASRLT aas="G"/>
+        </OperateOnResidueSubset>
+        <ConsensusLoopDesign name="disallow_nonnative_loop_sequences_adjacent" include_adjacent_residues="1" enrichment_threshold="-0.1" use_dssp="0" />
+        <ConsensusLoopDesign name="disallow_nonnative_loop_sequences" include_adjacent_residues="0" enrichment_threshold="0.2" use_dssp="0" />
+        <OperateOnResidueSubset name="coreAAs_sasa" selector="helix_core_sasa" > 
+         <RestrictAbsentCanonicalAASRLT aas="AFILV"/> WY
+        </OperateOnResidueSubset>
+        <OperateOnResidueSubset name="surfaceAAs_sasa" selector="helix_surface_sasa" >
+         <RestrictAbsentCanonicalAASRLT aas="EQKR"/>
+        </OperateOnResidueSubset>
+        <OperateOnResidueSubset name="presurfAAs_sasa" selector="helix_presurf_sasa" >
+         <RestrictAbsentCanonicalAASRLT aas="DNSTLQIHVYFEWKR"/> 
+        </OperateOnResidueSubset>
+        <OperateOnResidueSubset name="boundaryAAs_sasa" selector="helix_boundary_sasa" >
+         <RestrictAbsentCanonicalAASRLT aas="ADNSTLQYWIHVF"/> 
+        </OperateOnResidueSubset>
+        <OperateOnResidueSubset name="loopsAAs" selector="loops" > 
+         <RestrictAbsentCanonicalAASRLT aas="ADEFGHIKLNPQRSTVWY"/> 
+        </OperateOnResidueSubset>
+        <OperateOnResidueSubset name="not_tails_surf_loops_cst" selector="not_tails_surf_loops">
+            <PreventRepackingRLT/>
+        </OperateOnResidueSubset>
+    </TASKOPERATIONS>
+    <SCOREFXNS>
+    	<ScoreFunction name="beta_design_cst" weights="beta_nov16_cart.wts" symmetric="1">
+            <Reweight scoretype="aa_composition" weight="1.0" />
+            <Reweight scoretype="res_type_constraint" weight="1.0"/>
+            <Reweight scoretype="cart_bonded" weight="1.5"/>
+            <Reweight scoretype="lk_ball_bridge" weight="0.0"/>
+            <Reweight scoretype="lk_ball_bridge_uncpl" weight="0.0"/>
+            <Reweight scoretype="lk_ball" weight="0.96"/>
+            <Reweight scoretype="lk_ball_iso" weight="-0.34"/>
+            <Reweight scoretype="fa_sol" weight="1.04"/>
+            <Reweight scoretype="omega" weight="0.53"/>
+            <Reweight scoretype="hbond_sr_bb" weight="1.05"/>
+            <Reweight scoretype="hbond_lr_bb" weight="1.05"/>
+            <Reweight scoretype="hbond_bb_sc" weight="1.05"/>
+            <Reweight scoretype="fa_dun_rot" weight="0.76"/>
+            <Reweight scoretype="fa_dun_dev" weight="0.69"/>
+            <Reweight scoretype="fa_dun_semi" weight="0.85"/>
+            <Reweight scoretype="atom_pair_constraint" weight="1"/>
+            <Reweight scoretype="coordinate_constraint" weight="1"/>
+        </ScoreFunction>
+        <ScoreFunction name="beta_relax" weights="beta_nov16_cart.wts" symmetric="1">
+         <Reweight scoretype="cart_bonded" weight="1.5"/>
+         <Reweight scoretype="atom_pair_constraint" weight="1"/>
+         <Reweight scoretype="coordinate_constraint" weight="1"/>
+        </ScoreFunction>
+        <ScoreFunction name="beta_score" weights="beta_nov16_cart.wts" symmetric="1"/>
+        <ScoreFunction name="beta_out" weights="beta_nov16_cart.wts" symmetric="0"/>
+    </SCOREFXNS>
+    <MOVERS>
+        <SymPackRotamersMover name="polyL" scorefxn="beta_design_cst" task_operations="LEU" />
+
+	    <ConstraintSetMover name="cst_atm_pa_latt" cst_file="%%cst_file_lapc%%" add_constraints="True"/>
+	    <Dssp name="apply_dssp" reduced_IG_as_L="0"/>
+	    <RepeatProteinRelax name="setup_sym" numb_repeats="4" scorefxn="beta_design_cst" loop_cutpoint_mode="false" minimize="false" relax_iterations="1" cartesian="true"
+	        modify_symmetry_and_exit="true" remove_symmetry="false"/>
+	    <ConstraintSetMover name="loadcstMSA" cst_file="MSAcst" add_constraints="true"/>
+	    <AddCompositionConstraintMover name="MET_comp_sasa" filename="/home/fadh/biomineralization/newDHRs/DHR_hematite/design_2/protein.comp" selector="helix_core_boundary" />
+
+        <FastDesign name="fasdes" 
+	        scorefxn="beta_design_cst" min_type="lbfgs_armijo_nonmonotone"
+	        clear_designable_residues="0" repeats="%%fasdes_reps%%" ramp_down_constraints="0" 
+	        cartesian="1" bondangle="1" bondlength="1"
+	        task_operations="IFC,IC,aroTrp,aroChi,coreAAs_sasa,surfaceAAs_sasa,presurfAAs_sasa,boundaryAAs_sasa,loopsAAs,G_abego,E_abego,disallow_nonnative_loop_sequences,disallow_nonnative_loop_sequences_adjacent" 
+	        relaxscript="rosettacon2018">
+	    </FastDesign>
+
+        <FastDesign name="prefasdes" 
+            scorefxn="beta_design_cst" min_type="lbfgs_armijo_nonmonotone"
+            clear_designable_residues="0" repeats="1" ramp_down_constraints="0" 
+            cartesian="1" bondangle="1" bondlength="1"
+            task_operations="IFC,IC,aroTrp,aroChi,coreAAs_sasa,surfaceAAs_sasa,presurfAAs_sasa,boundaryAAs_sasa,loopsAAs,G_abego,E_abego,disallow_nonnative_loop_sequences,disallow_nonnative_loop_sequences_adjacent" 
+            relaxscript="rosettacon2018">
+        </FastDesign>
+
+	    <ClearConstraintsMover name="clearAllConstraints" />
+	    <RepeatProteinRelax name="remove_sym"  
+	        scorefxn="beta_design_cst" minimize="false" relax_iterations="1"
+	        loop_cutpoint_mode="false" numb_repeats="4"
+	        cartesian="true" modify_symmetry_and_exit="true" remove_symmetry="true" />
+	    <FastRelax name="frelax" 
+	        scorefxn="beta_relax" min_type="lbfgs_armijo_nonmonotone"
+	        repeats="1" ramp_down_constraints="0" 
+	        cartesian="1" bondangle="1" bondlength="1"
+	        task_operations="IFC,IC,aroTrp,aroChi"/>
+	    <!-- <CstInfoMover name="measure_lattice_compliance" -->
+	        <!-- cst_file="%%cst_file_lapc%%" prefix="lattice" recursive="1"/> -->
+        <AddConstraints name="constrain_cart_sideA">
+            <CoordinateConstraintGenerator name="gen_cart_csts_sideA"
+                residue_selector="h1"
+                sd="0.5"
+                bounded="false"
+                sidechain="false"
+                ca_only="true"
+                align_reference="true"/>
+        </AddConstraints>
+        <PackRotamersMover name="pack_tails" scorefxn="beta_out" task_operations="not_tails_surf_loops_cst,IFC,IC,aroTrp,aroChi,coreAAs_sasa,surfaceAAs_sasa,presurfAAs_sasa,boundaryAAs_sasa,disallow_nonnative_loop_sequences_adjacent"/> Has more task operations than needed
+        <DumpPdb name="dump_pdb" fname="polyl" scorefxn="beta_out" tag_time="1"/>
+        
+        <AddResidueLabel name="label_core_sym" residue_selector="sym_hcore" label="core_sym"/>
+        <AddResidueLabel name="label_boundary_sym" residue_selector="sym_hboun" label="boundary_sym"/>
+        <AddResidueLabel name="label_presurface_sym" residue_selector="sym_hpres" label="presurface_sym"/>
+        <AddResidueLabel name="label_surface_sym" residue_selector="sym_hsurf" label="surface_sym"/>
+
+        <AddResidueLabel name="label_core" residue_selector="helix_core_sasa" label="core"/>
+        <AddResidueLabel name="label_boundary" residue_selector="helix_boundary_sasa" label="boundary"/>
+        <AddResidueLabel name="label_presurface" residue_selector="helix_presurf_sasa" label="presurface"/>
+        <AddResidueLabel name="label_surface" residue_selector="helix_surface_sasa" label="surface"/>
+
+    </MOVERS>
+    <FILTERS>
+        <ResidueCount name="nres" confidence="0"/>
+        <ScoreType name="total_score" scorefxn="beta_score" score_type="total_score" threshold="0" confidence="0"/>
+        <MoveBeforeFilter name="score_sym" mover_name="setup_sym" filter_name="total_score" confidence="0"/>
+        <CalculatorFilter name="score_norm" confidence="0" equation="SCORE*4/NRES" threshold="-3.0">
+            <Var name="SCORE" filter_name="score_sym"/>
+            <Var name="NRES" filter_name="nres"/>
+        </CalculatorFilter>
+        <ResidueCount name="percent_hydrophobic" max_residue_count="70" min_residue_count="28" residue_types="PHE,ILE,LEU,MET,VAL,TRP,TYR" count_as_percentage="true" confidence="0"/>
+        <Holes name="holes" threshold="1.0" confidence="0"/>
+        <PackStat name="packstat" threshold="0.40" repeats="5" confidence="0" />
+        <BuriedSurfaceArea name="buried_surface_area" select_only_FAMILYVW="true" filter_out_low="true" cutoff_buried_surface_area="500" confidence="0"/>
+        <CalculatorFilter name="buried_surface_area_norm" confidence="0" equation="BSA/NRES" threshold="1" >
+            <Var name="BSA" filter_name="buried_surface_area" />
+            <Var name="NRES" filter_name="nres" />
+        </CalculatorFilter>
+        <Range name="buried_SASA_per_residue" filter="buried_surface_area_norm" lower_bound="60" upper_bound="150" confidence="0"/> 
+        <SSPrediction name="psipred_conf" confidence="0" cmd="/home/brunette/src/psipred3.21/runpsipred_single" use_probability="1" mismatch_probability="1" use_svm="0" threshold="0.20"/>
+        <BuriedUnsatHbonds name="buns_bb_heavy" report_bb_heavy_atom_unsats="true" scorefxn="beta_out" cutoff="8" residue_surface_cutoff="20.0" ignore_surface_res="true" print_out_info_to_pdb="true" confidence="0" />
+        <BuriedUnsatHbonds name="buns_sc_heavy" report_sc_heavy_atom_unsats="true" scorefxn="beta_out" cutoff="6" residue_surface_cutoff="20.0" ignore_surface_res="true" print_out_info_to_pdb="true" confidence="0" />
+        <SSShapeComplementarity name="ss_sc" verbose="1" loops="1" helices="1" min_sc="0.65" confidence="0" />
+        <RepeatParameter name="radius" param_type="radius" min="100" numb_repeats="4" confidence="1"/>
+        <RepeatParameter name="rise" param_type="rise" numb_repeats="4" confidence="0"/>
+        <RepeatParameter name="omega" param_type="omega" numb_repeats="4" confidence="0"/>
+    </FILTERS>
+    <PROTOCOLS>
+        <Add mover_name="setup_sym"/>
+        <Add mover_name="cst_atm_pa_latt"/>
+        <Add mover_name="apply_dssp"/>
+        <Add mover_name="loadcstMSA"/>
+        <Add mover_name="MET_comp_sasa"/>
+
+        <Add mover_name="polyL"/>
+        
+        <Add mover_name="label_core_sym"/>
+        <Add mover_name="label_boundary_sym"/>
+        <Add mover_name="label_presurface_sym"/>
+        <Add mover_name="label_surface_sym"/>
+        <Add mover_name="dump_pdb"/>
+        
+        <Add mover_name="constrain_cart_sideA"/>
+
+        <!-- <Add mover_name="prefasdes"/> -->
+
+        <!-- <Add mover_name="frelax"/> -->
+
+        <Add mover_name="fasdes"/>
+
+        <Add mover_name="remove_sym"/>
+        <Add mover_name="pack_tails"/>
+
+        <Add mover_name="clearAllConstraints"/>
+
+        <Add mover_name="label_core"/>
+        <Add mover_name="label_boundary"/>
+        <Add mover_name="label_presurface"/>
+        <Add mover_name="label_surface"/>
+
+        <!-- <Add mover_name="measure_lattice_compliance"/> -->
+        <Add filter_name="score_norm"/>
+        <Add filter_name="percent_hydrophobic"/>
+        <Add filter_name="holes"/>
+        <Add filter_name="packstat"/>
+        <Add filter_name="buried_surface_area_norm"/>
+        <Add filter_name="buried_SASA_per_residue"/>
+        <Add filter_name="psipred_conf"/>
+        <Add filter_name="buns_bb_heavy"/>
+        <Add filter_name="buns_sc_heavy"/>
+        <Add filter_name="ss_sc"/>
+        <!-- <Add filter_name="radius"/> -->
+        <Add filter_name="omega"/>
+        <Add filter_name="rise"/>
+    </PROTOCOLS>
+    <OUTPUT scorefxn="beta_out" />
+</ROSETTASCRIPTS>

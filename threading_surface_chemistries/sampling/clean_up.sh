@@ -1,0 +1,14 @@
+#rm -r DHR18_5CWI_XtalFit_4x
+#rm -r PEP12_PLP_RRX0398_XtalFit_4x
+#rm -r DHR54_5CWL_XtalFit_4x
+#rm -r DHR64_5CWM_XtalFit_4x
+#rm -r DHR71_5CWN_XtalFit_4x
+#rm -r DHR07_5CWD_XtalFit_4x
+#rm -r DHR81_5CWQ_XtalFit_4x
+#rm -r DHR08_5CWF_XtalFit_4x
+#rm -r DHR79_5CWP_XtalFit_4x
+#rm -r DHR09_HFuse_pH192_XtalFit_4x
+#rm -r THR_35_DHR_XtalFit_6x
+#rm -r DHR52_XtalFit_4x
+#rm -r DHR76_5CWO_XtalFit_4x
+#rm -r DHR04_5CWB_XtalFit_4x

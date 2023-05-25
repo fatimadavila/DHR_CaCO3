@@ -1,0 +1,1 @@
+/home/thuddy/th_home/TJ_rosetta_dev_backup/main/source/bin/rosetta_scripts.hdf5.linuxgccrelease -indexed_structure_store:fragment_store /home/brunette/DBs/hdf5/ss_grouped_vall_helix_shortLoop.h5 -s dummy_input.pdb -parser:protocol des_test.xml -parser:script_vars z1=0 z2=0 rot1=0 rot2=0 @/home/thuddy/th_home/DHR/output/flags_unmute.txt -overwrite > log.txt &

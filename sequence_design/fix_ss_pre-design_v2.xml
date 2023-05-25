@@ -1,0 +1,38 @@
+<ROSETTASCRIPTS>
+    <SCOREFXNS>
+        <ScoreFunction name="sfxn_beta" weights="ref2015" symmetric="false"/>
+    </SCOREFXNS>
+    <TASKOPERATIONS>
+    </TASKOPERATIONS>
+    <MOVERS>
+        <FixAllLoopsMover name="FixLoops" 
+            loopLengthRange="2,4" RMSthreshold="0.4" 
+            resAdjustmentRangeSide1="-3,3" resAdjustmentRangeSide2="-3,3" residue_range="1,%%repeat_length_plus10%%" 
+            max_vdw_change="10.0" ideal="false" reject_failed_loops="true"
+            allowed_loop_abegos="AGBA,ABBA,AGBBA,ABABA,ABBBA,AGABBA,ABBBBA,AGBBBA"/>
+        <RepeatPropagationMover name="propagate" 
+            numb_repeats="4" extract_repeat_info_from_pose="true" 
+            start_pose_numb_repeats="4" 
+            ideal_repeat="false"/>
+        <Idealize name="idealize" 
+            atom_pair_constraint_weight="0.005" coordinate_constraint_weight="0.01" 
+            fast="false" report_CA_rmsd="true" impose_constraints="true" constraints_only="false"/> # sometimes loop closure creates cart problems
+    </MOVERS>
+    <FILTERS>
+        <Geometry name="geometry" omega="150" cart_bonded="30" start="1" end="9999" count_bad_residues="false" confidence="1"/> # sometimes loop closure uses fragments with cis bonds
+        <worst9mer name="worst9mer_a" threshold="0.4" confidence="1"/>
+        <RepeatParameter name="radius" param_type="radius" min="100" numb_repeats="4" confidence="1"/>
+        <RepeatParameter name="rise" param_type="rise" numb_repeats="4" confidence="0"/>
+        <RepeatParameter name="omega" param_type="omega" numb_repeats="4" confidence="0"/>
+    </FILTERS>
+    <PROTOCOLS>
+        <Add mover_name="FixLoops"/>
+        <Add mover_name="idealize"/>
+        <Add mover_name="propagate"/>
+        <Add filter_name="geometry"/>
+        <Add filter_name="worst9mer_a"/>
+        <Add filter_name="radius"/>
+        <Add filter_name="rise"/>
+        <Add filter_name="omega"/>
+    </PROTOCOLS>
+</ROSETTASCRIPTS>

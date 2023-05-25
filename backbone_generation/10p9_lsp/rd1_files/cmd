@@ -1,0 +1,4 @@
+#run the rosetta job
+/EXECUTABLE_PATH/rosetta_scripts.hdf5.linuxgccrelease -parser:protocol design.xml @flags -nstruct 10 > out.log
+#remove the debug pdbs
+rm dump*pdb

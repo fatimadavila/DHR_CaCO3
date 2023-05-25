@@ -1,0 +1,206 @@
+
+<ROSETTASCRIPTS>
+    <SCOREFXNS>
+        <ScoreFunction name="BetaNov16" weights="beta_nov16"/>
+
+        <ScoreFunction name="DesignBetaNov16Cst" weights="beta_nov16">
+            <Reweight scoretype="atom_pair_constraint" weight="1.0"/>
+            <Reweight scoretype="dihedral_constraint" weight="1.0"/>                
+            <Reweight scoretype="coordinate_constraint" weight="1.0"/>
+            <Reweight scoretype="aa_composition" weight="1.0"/>
+            <Reweight scoretype="arg_cation_pi" weight="3" />
+            <Reweight scoretype="approximate_buried_unsat_penalty" weight="5.0" />
+            <Set approximate_buried_unsat_penalty_assume_const_backbone="true" />
+            <Set approximate_buried_unsat_penalty_natural_corrections1="true" />
+            <Set approximate_buried_unsat_penalty_hbond_energy_threshold="-0.5" />
+            <Set approximate_buried_unsat_penalty_hbond_bonus_cross_chain="0.0" />
+            <Set approximate_buried_unsat_penalty_hbond_bonus_ser_to_helix_bb="0.0" />
+            <Set approximate_buried_unsat_penalty_burial_probe_radius="3.5"/>
+            <Set approximate_buried_unsat_penalty_burial_atomic_depth="3.0"/>
+        </ScoreFunction>
+    </SCOREFXNS>
+
+    <RESIDUE_SELECTORS>
+        <Index name="position2" resnums="2,59,116,173" />
+        <Index name="position3" resnums="3,60,117,174" />
+        <Index name="position5" resnums="5,62,119,176" />
+        <Index name="position6" resnums="6,63,120,177" />
+        <Index name="position9" resnums="9,66,123,180" />
+        <Index name="position10" resnums="10,67,124,181" />
+        <Index name="position12" resnums="12,69,126,183" />
+        <Index name="position13" resnums="13,70,127,184" />
+        <Index name="position16" resnums="16,73,130,187" />
+        <Index name="position17" resnums="17,74,131,188" />
+        <Index name="position19" resnums="19,76,133,190" />
+        <Index name="position20" resnums="20,77,134,191" />
+        <Index name="position23" resnums="23,80,137,194" />
+        <Index name="position24" resnums="24,81,138,195" />
+        <Index name="position26" resnums="26,83,140,197" />
+        <Index name="position27" resnums="27,84,141,198" />
+        <Index name="position28" resnums="28,85,142,199" />
+        <Index name="ref_res" resnums="2,3,5,6,9,10,12,13,16,17,19,20,23,24,26,27,28" />
+        <Not name="not_ref_res" selector="ref_res"/>
+        <Or name="designable" selectors="position2,position3,position5,position6,position9,position10,position12,position13,position16,position17,position19,position20,position23,position24,position26,position27,position28"/>
+        <Not name="not_designable" selector="designable"/>
+        <Chain name="chain_a" chains="A" />
+    </RESIDUE_SELECTORS>
+    <SIMPLE_METRICS>
+        <SasaMetric name="total_sasa" residue_selector="chain_a" sasa_metric_mode="all_sasa" />
+        <SasaMetric name="total_polar_sasa" residue_selector="chain_a" sasa_metric_mode="polar_sasa" />
+        <SasaMetric name="total_hydrophobic_sasa" residue_selector="chain_a" sasa_metric_mode="hydrophobic_sasa" />
+        <SapScoreMetric name="sap_score" />
+        <TotalEnergyMetric name="tot_Rscore" scoretype="total_score" scorefxn="BetaNov16" />
+        <SelectedResidueCountMetric name="total_no_res_chA" residue_selector="chain_a" />
+        <CalculatorMetric name="score_resnorm" equation="TOTAL_SCORE / TOTAL_NUMBER_RESIDUES" >
+            <VAR name="TOTAL_SCORE" metric="tot_Rscore" />
+            <Var name="TOTAL_NUMBER_RESIDUES" metric="total_no_res_chA"/>
+        </CalculatorMetric>
+        <CalculatorMetric name="SASA_resnorm" equation="TOTAL_SCORE / TOTAL_NUMBER_RESIDUES" >
+            <VAR name="TOTAL_SCORE" metric="total_sasa" />
+            <Var name="TOTAL_NUMBER_RESIDUES" metric="total_no_res_chA"/>
+        </CalculatorMetric>
+        <CalculatorMetric name="polarSASA_resnorm" equation="TOTAL_SCORE / TOTAL_NUMBER_RESIDUES" >
+            <VAR name="TOTAL_SCORE" metric="total_polar_sasa" />
+            <Var name="TOTAL_NUMBER_RESIDUES" metric="total_no_res_chA"/>
+        </CalculatorMetric>
+        <CalculatorMetric name="hydrophobicSASA_resnorm" equation="TOTAL_SCORE / TOTAL_NUMBER_RESIDUES" >
+            <VAR name="TOTAL_SCORE" metric="total_hydrophobic_sasa" />
+            <Var name="TOTAL_NUMBER_RESIDUES" metric="total_no_res_chA"/>
+        </CalculatorMetric>
+        <CalculatorMetric name="SAP_resnorm" equation="TOTAL_SCORE / TOTAL_NUMBER_RESIDUES" >
+            <VAR name="TOTAL_SCORE" metric="sap_score" />
+            <Var name="TOTAL_NUMBER_RESIDUES" metric="total_no_res_chA"/>
+        </CalculatorMetric>
+    </SIMPLE_METRICS>    
+    <TASKOPERATIONS>
+        <OperateOnResidueSubset name="not_designable" selector="not_designable">
+        <RestrictToRepackingRLT />
+    </OperateOnResidueSubset>
+        <OperateOnResidueSubset name="not_ref_res" selector="not_ref_res">
+        <RestrictToRepackingRLT />
+    </OperateOnResidueSubset>
+        <OperateOnResidueSubset name="designable" selector="designable">
+        <RestrictAbsentCanonicalAASRLT aas="EDKRQNHSATLIVWYPGCMF" />
+    </OperateOnResidueSubset>
+        <InitializeFromCommandline name="IFC" />
+        <IncludeCurrent name="IC" />
+        <LimitAromaChi2 name="aroChi" />
+    </TASKOPERATIONS>
+
+    <FILTERS>
+        <ScoreType name="DesignBetaNov16CstFilter" scorefxn="DesignBetaNov16Cst" score_type="total_score" threshold="0" confidence="0" />
+        <ScoreType name="BetaNov16" scorefxn="BetaNov16" score_type="total_score" threshold="0" confidence="0" />
+        <RepeatParameter name="radius" param_type="radius" min="100" numb_repeats="4" confidence="0"/>
+        <RepeatParameter name="rise" param_type="rise" numb_repeats="4" confidence="0"/>
+        <RepeatParameter name="omega" param_type="omega" numb_repeats="4" confidence="0"/>
+    </FILTERS>
+    
+    <MOVERS>
+        <SetupNCS name="NCS" bb="0" chi="0" wt="1.00" symmetric_sequence="1" >
+            <NCSgroup source="2" target="59"/>
+            <NCSgroup source="2" target="116"/>
+            <NCSgroup source="2" target="173"/>
+            <NCSgroup source="3" target="60"/>
+            <NCSgroup source="3" target="117"/>
+            <NCSgroup source="3" target="174"/>
+            <NCSgroup source="5" target="62"/>
+            <NCSgroup source="5" target="119"/>
+            <NCSgroup source="5" target="176"/>
+            <NCSgroup source="6" target="63"/>
+            <NCSgroup source="6" target="120"/>
+            <NCSgroup source="6" target="177"/>
+            <NCSgroup source="9" target="66"/>
+            <NCSgroup source="9" target="123"/>
+            <NCSgroup source="9" target="180"/>
+            <NCSgroup source="10" target="67"/>
+            <NCSgroup source="10" target="124"/>
+            <NCSgroup source="10" target="181"/>
+            <NCSgroup source="12" target="69"/>
+            <NCSgroup source="12" target="126"/>
+            <NCSgroup source="12" target="183"/>
+            <NCSgroup source="13" target="70"/>
+            <NCSgroup source="13" target="127"/>
+            <NCSgroup source="13" target="184"/>
+            <NCSgroup source="16" target="73"/>
+            <NCSgroup source="16" target="130"/>
+            <NCSgroup source="16" target="187"/>
+            <NCSgroup source="17" target="74"/>
+            <NCSgroup source="17" target="131"/>
+            <NCSgroup source="17" target="188"/>
+            <NCSgroup source="19" target="76"/>
+            <NCSgroup source="19" target="133"/>
+            <NCSgroup source="19" target="190"/>
+            <NCSgroup source="20" target="77"/>
+            <NCSgroup source="20" target="134"/>
+            <NCSgroup source="20" target="191"/>
+            <NCSgroup source="23" target="80"/>
+            <NCSgroup source="23" target="137"/>
+            <NCSgroup source="23" target="194"/>
+            <NCSgroup source="24" target="81"/>
+            <NCSgroup source="24" target="138"/>
+            <NCSgroup source="24" target="195"/>
+            <NCSgroup source="26" target="83"/>
+            <NCSgroup source="26" target="140"/>
+            <NCSgroup source="26" target="197"/>
+            <NCSgroup source="27" target="84"/>
+            <NCSgroup source="27" target="141"/>
+            <NCSgroup source="27" target="198"/>
+            <NCSgroup source="28" target="85"/>
+            <NCSgroup source="28" target="142"/>
+            <NCSgroup source="28" target="199"/>
+        </SetupNCS>
+
+        <RandomMutation name="mutate" task_operations="not_ref_res,designable" scorefxn="BetaNov16"/>
+
+        <AddCompositionConstraintMover name="load_aa_comp_cst" filename="%%aa_comp%%" selector="designable" />
+
+
+        <FastDesign name="fast_design" scorefxn="DesignBetaNov16Cst" repeats="1" task_operations="designable,not_designable,IFC,IC,aroChi">
+            <MoveMap name="fast_design_mm" chi="1" bb="0"/>
+        </FastDesign>
+
+        <FastRelax name="repack" scorefxn="DesignBetaNov16Cst" repeats="1" task_operations="not_designable,IFC,IC,aroChi" >
+            <MoveMap name="repack_mm" chi="1" bb="0" jump="0"/>
+        </FastRelax>
+
+        <FastRelax name="full_repack" scorefxn="DesignBetaNov16Cst" repeats="1" task_operations="IFC,IC,aroChi" >
+            <MoveMap name="full_repack_mm" chi="1" bb="0" jump="0"/>
+        </FastRelax>
+
+        <ParsedProtocol name="mc_round" mode="sequence" >
+            <Add mover_name="mutate" />
+            <Add mover_name="NCS" />
+            <Add mover_name="repack" /> 
+        </ParsedProtocol>
+
+        <GenericSimulatedAnnealer name="monte_carlo_seq_design" mover_name="mc_round" periodic_mover="full_repack" eval_period="11" filter_name="DesignBetaNov16CstFilter" trials="30" sample_type="low" temperature="1" drift="1" recover_low="1" preapply="0" />
+        
+        <AddSapConstraintMover name="add_sap" />
+    </MOVERS>
+    
+    <PROTOCOLS>
+        <Add mover_name="NCS" />
+        <Add mover_name="load_aa_comp_cst" />
+        <Add mover_name="fast_design" />
+        <Add mover_name="NCS" />
+        <Add mover_name="monte_carlo_seq_design" />
+        <Add mover_name="full_repack" />
+        <!-- <Add mover_name="add_sap" /> REPLACED WITH SIMPLE METRIC FROM FATIMA -->
+        <Add filter_name="BetaNov16" />
+        <Add filter_name="radius"/>
+        <Add filter_name="rise"/>
+        <Add filter_name="omega"/>
+        <Add metrics="total_sasa" labels="total_sasa"/>
+        <Add metrics="total_polar_sasa" labels="total_polar_sasa"/>
+        <Add metrics="total_hydrophobic_sasa" labels="total_hydrophobic_sasa"/>
+        <Add metrics="sap_score" labels="sap_score"/>
+        <Add metrics="tot_Rscore" labels="tot_Rscore"/>
+        <Add metrics="score_resnorm" labels="score_resnorm"/>
+        <Add metrics="SASA_resnorm" labels="SASA_resnorm"/>
+        <Add metrics="polarSASA_resnorm" labels="polarSASA_resnorm"/>
+        <Add metrics="hydrophobicSASA_resnorm" labels="hydrophobicSASA_resnorm"/>
+        <Add metrics="SAP_resnorm" labels="SAP_resnorm"/>
+    </PROTOCOLS>
+    
+    <OUTPUT scorefxn="DesignBetaNov16Cst" />
+</ROSETTASCRIPTS>

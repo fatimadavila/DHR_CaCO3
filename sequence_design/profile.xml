@@ -1,0 +1,29 @@
+<ROSETTASCRIPTS>
+<RESIDUE_SELECTORS>
+    <Chain name="chainA" chains="1" />
+</RESIDUE_SELECTORS>
+<TASKOPERATIONS>
+    <OperateOnResidueSubset name="fast_pack" selector="chainA" >
+     <RestrictAbsentCanonicalAASRLT aas="LAGNPEK"/>
+    </OperateOnResidueSubset>
+</TASKOPERATIONS>
+<SCOREFXNS>
+    <ScoreFunction name="beta" weights="ref2015.wts" symmetric="1"/>
+</SCOREFXNS>
+<FILTERS>
+</FILTERS>
+<MOVERS>
+    <RepeatProteinRelax name="setup_sym" numb_repeats="4" scorefxn="beta" loop_cutpoint_mode="false" minimize="false" relax_iterations="1" 
+        cartesian="true" modify_symmetry_and_exit="true" remove_symmetry="false" />
+    <RepeatProteinRelax name="remove_sym" numb_repeats="4" scorefxn="beta" loop_cutpoint_mode="false" minimize="false" relax_iterations="1" 
+        cartesian="true" modify_symmetry_and_exit="true" remove_symmetry="true" />
+    <SymPackRotamersMover name="pack" scorefxn="beta" task_operations="fast_pack" />
+    <StructProfileMover name="genProfile" outputProfile="true" add_csts_to_pose="1" consider_topN_frags="1000000" eliminate_background="0" ignore_terminal_residue="1" only_loops="0" allowed_deviation="0.2" allowed_deviation_loops="0.1" burialWt="0.8" RMSthreshold="0.4" />
+</MOVERS>
+<PROTOCOLS>
+    <Add mover_name="setup_sym"/>
+    <Add mover_name="pack"/>
+    <Add mover_name="remove_sym"/>
+    <Add mover_name="genProfile"/>
+</PROTOCOLS>
+</ROSETTASCRIPTS>

@@ -1,0 +1,57 @@
+#!/bin/bash
+
+# Fix the loops and filter on geometry and radius
+/home/brunette/src/Rosetta_dev/main/source/bin/rosetta_scripts.hdf5.linuxgccrelease \
+-overwrite \
+-parser:protocol /home/fadh/biomineralization/newDHRs/DHR_hematite/design_2/fix_ss_pre-design_v2.xml \
+-suffix _fxdLoop \
+-database /home/brunette/src/Rosetta_dev/main/database/ \
+-beta \
+-chemical:exclude_patches Cterm_amidation SpecialRotamer VirtualBB ShoveBB VirtualDNAPhosphate VirtualNTerm CTermConnect sc_orbitals pro_hydroxylated_case1 pro_hydroxylated_case2 ser_phosphorylated thr_phosphorylated  tyr_phosphorylated tyr_sulfated lys_dimethylated lys_monomethylated  lys_trimethylated lys_acetylated glu_carboxylated cys_acetylated tyr_diiodinated N_acetylated C_methylamidated MethylatedProteinCterm \
+-indexed_structure_store:fragment_store /home/brunette/DBs/hdf5/ss_grouped_vall_helix_shortLoop.h5 \
+-jd2:ntrials 3 \
+-s "${1}" \
+-parser:script_vars repeat_length_plus10="${2}"
+
+# Variable storing the new input name
+fxLp_basename=$(basename ${1} .pdb)
+fxLp_input="$fxLp_basename""_fxdLoop_0001.pdb"
+
+# Generate the sequence profile
+/software/rosetta/latest/bin/rosetta_scripts.hdf5.linuxgccrelease \
+-indexed_structure_store:fragment_store /home/brunette/DBs/hdf5/ss_grouped_vall_helix_shortLoop.h5 \
+-s "$fxLp_input" \
+-parser:protocol /home/drhicks1/repeat_design_02012018/inputs/profile.xml \
+-out:nooutput
+
+# Fix the profile
+echo "Fixing the profile"
+python /home/drhicks1/repeat_design_02012018/inputs/fix_profile.py
+echo "Done fixing the profile"
+
+# Generate new latt csts based on the new predicted ss
+echo "Creating new lattice atom pair constraints."
+python3 /home/fadh/scripts/gen_newlattcsts_fxdLoops.py -pdb $fxLp_input -lsp 10.9 -cst_tol 0.05
+cst_file="$fxLp_basename""_fxdLoop_0001_latt_atmp_csts.cst"
+echo "Done with creating constraints."
+
+# Design
+/software/rosetta/latest/bin/rosetta_scripts.hdf5.linuxgccrelease \
+-overwrite \
+-beta \
+-parser:protocol /home/fadh/biomineralization/newDHRs/DHR_hematite/design_2/design_noMet.xml \
+-parser:script_vars \
+	cst_file_lapc="$cst_file" \
+	fasdes_reps="3" \
+-s "$fxLp_input" \
+-nstruct 1 \
+-ex1 true \
+-ex2aro true \
+-holes:dalphaball /home/brunette/scripts/DAlphaBall.gcc \
+-dualspace \
+-lazy_ig false \
+-symmetry_definition stoopid \
+-old_sym_min true \
+-no_nstruct_label true \
+-suffix _design \
+-jd2:ntrials 10

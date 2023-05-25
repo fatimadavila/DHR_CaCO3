@@ -1,0 +1,91 @@
+<ROSETTASCRIPTS>
+    <RESIDUE_SELECTORS>
+        <Index name="interface_only" resnums="65B,69B,80B,87B,91B"/>
+        <Not name="not_interface" selector="interface_only"/>
+    </RESIDUE_SELECTORS>
+
+    <TASKOPERATIONS>
+        <InitializeFromCommandline name="IFC"/>
+        <LimitAromaChi2 name="aroChi"/>
+        <ExtraRotamersGeneric name="ex123" ex1="1" ex2="1" ex3="1" extrachi_cutoff="0"/> 
+
+        <RestrictToRepacking name="repack_only" />
+        <OperateOnResidueSubset name="pack_interface_only" selector="not_interface" >
+            <PreventRepackingRLT />
+        </OperateOnResidueSubset>
+
+
+    </TASKOPERATIONS>
+
+    <SCOREFXNS>
+        <ScoreFunction name="BetaNov16" weights="beta_nov16">
+        </ScoreFunction>
+        <ScoreFunction name="BetaNov16Cst" weights="beta_nov16" >               
+            <Reweight scoretype="coordinate_constraint" weight="1.0" />
+        </ScoreFunction>
+    </SCOREFXNS>
+
+    <FILTERS>
+        <Ddg name="ddg" scorefxn="BetaNov16" chain_num="2" repeats="2" repack="true" repack_bound="false" confidence="0"/>
+        <ScoreType name="total_score_plus_cst" scorefxn="BetaNov16Cst" score_type="total_score" threshold="0" confidence="0" />
+    </FILTERS>
+
+    <MOVERS>
+        <RollMover name="random_spin" chain="2" min_angle="-180" max_angle="180" >
+            <axis x="0" y="0" z="1" /> 
+            <translate x="0.0" y="0.0" z="0" /> 
+        </RollMover> 
+
+        <RigidBodyTransMover name="move_up" jump="%%surf_to_prot%%" distance="100" x="0.0" y="0.0" z="1.0" />
+
+        <!-- Non-crystallographic constraints -->
+        <SetupNCS name="NCS" bb="1" chi="0" wt="1.00" symmetric_sequence="1" >
+            <NCSgroup source="65B-128B" target="1B-64B"/>
+            <NCSgroup source="65B-128B" target="129B-192B"/>
+            <NCSgroup source="65B-128B" target="193B-256B"/>
+            <NCSgroup source="65B-128B" target="257B-320B"/>
+            <NCSgroup source="65B-128B" target="321B-384B"/>
+        </SetupNCS>
+
+        <Translate name="random_translation_step" chain="B" distribution="uniform" cycles="1" angstroms="2" force="true"/>
+        <RollMover name="random_rotatation_step" chain="2" random_roll="True" random_roll_angle_mag="10" random_roll_trans_mag="0" /> 
+
+        <PackRotamersMover name="repack_interface_repeat" nloop="2" scorefxn="BetaNov16" task_operations="repack_only,pack_interface_only,IFC,aroChi,ex123" />
+
+        <!-- REPACK REFERENCE REPEAT AND PROPOGATE ROTAMERS TO TARGET REPEATS -->        
+        <ParsedProtocol name="repeat_repack" mode="sequence" >
+            <Add mover_name="repack_interface_repeat" />
+            <Add mover_name="NCS" /> 
+        </ParsedProtocol>
+
+        <!-- MCMC FOR ADSORBED STATE -->
+        <ParsedProtocol name="mc_dock_round" mode="single_random" >
+            <Add mover_name="repeat_repack" />
+            <Add mover_name="random_translation_step" />
+            <Add mover_name="random_rotatation_step" /> 
+        </ParsedProtocol>
+        <!-- Moves are accepted or rejected by generic simulate annealer mover-->        
+        <GenericSimulatedAnnealer name="monte_carlo_dock" mover_name="mc_dock_round" filter_name="total_score_plus_cst" trials="150" sample_type="low" temperature="1" drift="1" recover_low="1" preapply="0" />
+    
+        <!-- MCMC FOR SOLUTION STATE -->
+        <ParsedProtocol name="mc_pack_round" mode="single_random" >
+            <Add mover_name="repeat_repack" />
+        </ParsedProtocol>
+        <!-- Moves are accepted or rejected by generic simulate annealer mover-->        
+        <GenericSimulatedAnnealer name="monte_carlo_pack" mover_name="mc_pack_round" filter_name="total_score_plus_cst" trials="50" sample_type="low" temperature="1" drift="1" recover_low="1" preapply="0" />
+    
+    </MOVERS>
+
+    <APPLY_TO_POSE>
+    </APPLY_TO_POSE>
+
+            <PROTOCOLS>
+            <Add mover_name="random_spin" />
+            <Add mover_name="repeat_repack" />
+            <Add mover_name="monte_carlo_dock" />
+        </PROTOCOLS>
+
+    <OUTPUT scorefxn="BetaNov16" />
+
+ 
+</ROSETTASCRIPTS>
