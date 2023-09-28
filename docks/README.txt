@@ -1,0 +1,1 @@
+This directory contains the models of the DHRs on CaCO3 faces shown in Supplementary Figure 14. More conformations and the Rosetta protocols used to generate them may be found in DHR_CaCO3/methods/docking_on_caco3/ 
